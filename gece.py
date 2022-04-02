@@ -139,59 +139,21 @@ async def mentionall(event):
 #########################
 
 # admin etiketleme modülü
-@client.on(events.NewMessage(pattern="^/atag ?(.*)"))
-async def mentionalladmin(event):
-  global gece_tag
-  if event.is_private:
-    return await event.respond(f"{noqrup}")
-  
-  admins = []
-  async for admin in client.iter_participants(event.chat_id, filter=ChannelParticipantsAdmins):
-    admins.append(admin.id)
-  if not event.sender_id in admins:
-    return await event.respond(f"{noadmin}")
-  
-  if event.pattern_match.group(1):
-    mode = "text_on_cmd"
-    msg = event.pattern_match.group(1)
-  elif event.reply_to_msg_id:
-    mode = "text_on_reply"
-    msg = event.reply_to_msg_id
-    if msg == None:
-        return await event.respond("__Eski mesajları göremiyorum! (bu mesaj beni gruba eklemeden önce yazılmış)__")
-  elif event.pattern_match.group(1) and event.reply_to_msg_id:
-    return await event.respond("__Etiketleme mesajı yazmadın!__")
-  else:
-    return await event.respond("__Etiketleme için bir mesajı yanıtlayın veya bir mesaj yazın!__")
-    
-  if mode == "text_on_cmd":
-    await client.send_message(event.chat_id, "❄️ Admin etiketleme başladı\n⏱️ İnterval - 2 saniye",
-                    buttons=(
-                      [
-                       Button.url('📣 Support', f'https://t.me/{support}')
-                      ]
-                    )
-                  ) 
-    gece_tag.append(event.chat_id)
-    usrnum = 0
-    usrtxt = ""
-    async for usr in client.iter_participants(event.chat_id):
-      usrnum += 1
-      usrtxt += f"[{usr.first_name}](tg://user?id={usr.id}) "
-      if event.chat_id not in gece_tag:
-        await event.respond("⛔ Admin etiketleme işlemi durduruldu",
-                    buttons=(
-                      [
-                       Button.url('📣 Support', f'https://t.me/{support}')
-                      ]
-                    )
-                  )
-        return
-      if usrnum == 1:
-        await client.send_message(event.chat_id, f"{usrtxt} {msg}")
-        await asyncio.sleep(2)
-        usrnum = 0
-        usrtxt = ""
+@client.on(events.NewMessage(pattern=lambda x: "/atag" in x.lower(), incoming=True))
+async def tag_admin(event):
+    chat = await event.get_input_chat()
+    text = "Tagging admins"
+    async for x in event.client.iter_participants(chat, 100, filter=ChannelParticipantsAdmins):
+        text += f" \n [{x.first_name}](tg://user?id={x.id})"
+    if event.reply_to_msg_id:
+        await event.client.send_message(event.chat_id, text, reply_to=event.reply_to_msg_id)
+    else:
+        await event.reply(text)
+    raise StopPropagation
+
+def main():
+  bot.start(bot_token=TOKEN)
+  bot.run_until_disconnected()
 
     
 
